@@ -13,7 +13,7 @@ from tensorflow.python.keras.preprocessing.sequence import pad_sequences
 
 from sklearn.model_selection import train_test_split
 
-TextPolarityPreprocessor = NewType('TextPolarityPreprocessor', object)
+TextPolarityDataManager = NewType('TextPolarityDataManager', object)
 TextPolarityDataset = NewType('TextPolarityDataset', Dataset)
 
 
@@ -23,7 +23,7 @@ def read_csv_dataset(path: str) -> List:
     return data
 
 
-class TextPolarityPreprocessor(object):
+class TextPolarityDataManager(object):
 
     class TextPolarityDataset(Dataset):
         def __init__(self, dataset: Tuple[List, List]) -> None:
@@ -59,14 +59,14 @@ class TextPolarityPreprocessor(object):
 
         return
 
-    def load_dataset(self) -> TextPolarityPreprocessor:
+    def load_dataset(self) -> TextPolarityDataManager:
         _train_path, _test_path = self._train_path, self._test_path
 
         self._raw_dataset = self._load_dataset(_train_path, _test_path)
 
         return self
 
-    def morphalize(self) -> TextPolarityPreprocessor:
+    def morphalize(self) -> TextPolarityDataManager:
         _train_text_dataset = self._raw_dataset['train']['text']
         _test_text_dataset = self._raw_dataset['test']['text']
         self._morph_analyzer = self._crate_morph_analyzer()
@@ -79,7 +79,7 @@ class TextPolarityPreprocessor(object):
 
         return self
 
-    def build_tokenizer(self) -> TextPolarityPreprocessor:
+    def build_tokenizer(self) -> TextPolarityDataManager:
         _train_morph_text_dataset = self._raw_dataset['train']['morph_text']
 
         tokenizer = self._build_tokenizer(_train_morph_text_dataset)
@@ -88,7 +88,7 @@ class TextPolarityPreprocessor(object):
 
         return self
 
-    def preprocess(self) -> TextPolarityPreprocessor:
+    def preprocess(self) -> TextPolarityDataManager:
         _train_morph_text_dataset = self._raw_dataset['train']['morph_text']
         _train_label_dataset = self._raw_dataset['train']['label']
         _test_morph_text_dataset = self._raw_dataset['test']['morph_text']
@@ -103,12 +103,34 @@ class TextPolarityPreprocessor(object):
 
         return self
 
-    def get_train_dataset(self) -> TextPolarityDataset:
+    def get_train_dataloader(self, batch_size: int, drop_last: bool = True) -> DataLoader:
+        _batch_size = batch_size
+        _drop_last = drop_last
+        _train_torch_dataset = self._get_train_dataset()
+
+        train_data_loader = DataLoader(_train_torch_dataset,
+                                       batch_size=_batch_size,
+                                       shuffle=True,
+                                       num_workers=4,
+                                       drop_last=_drop_last)
+
+        return train_data_loader
+
+    def get_test_dataloader(self, batch_size: int) -> DataLoader:
+        _batch_size = batch_size
+        _test_torch_dataset = self._get_test_dataset()
+
+        test_data_loader = DataLoader(_test_torch_dataset,
+                                      batch_size=_batch_size)
+
+        return test_data_loader
+
+    def _get_train_dataset(self) -> TextPolarityDataset:
         train_dataset = TextPolarityDataset(self._train_dataset)
 
         return train_dataset
 
-    def get_test_dataset(self) -> TextPolarityDataset:
+    def _get_test_dataset(self) -> TextPolarityDataset:
         test_dataset = TextPolarityDataset(self._test_dataset)
 
         return test_dataset
