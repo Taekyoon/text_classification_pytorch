@@ -5,6 +5,7 @@ from konlpy.tag import Okt
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
+
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
 
@@ -18,7 +19,7 @@ TextPolarityDataset = NewType('TextPolarityDataset', Dataset)
 
 
 def read_csv_dataset(path: str) -> List:
-    data = pd.read_csv(path)
+    data = pd.read_csv(path, sep="\t")
 
     return data
 
@@ -55,7 +56,7 @@ class TextPolarityDataManager(object):
         self._raw_dataset = None
 
         self._train_dataset = None
-        self._test_datset = None
+        self._test_dataset = None
 
         return
 
@@ -98,12 +99,12 @@ class TextPolarityDataManager(object):
         numerized_train_text_dataset = self._preprocess_input_dataset(_train_morph_text_dataset, _tokenizer)
         numerized_test_text_datset = self._preprocess_input_dataset(_test_morph_text_dataset, _tokenizer)
 
-        self._train_dataset = (numerized_train_text_dataset, _train_label_dataset)
-        self._test_datset = (numerized_test_text_datset, _test_label_dataset)
+        self._train_dataset = self._from_tensor_slices(numerized_train_text_dataset, _train_label_dataset)
+        self._test_dataset = self._from_tensor_slices(numerized_test_text_datset, _test_label_dataset)
 
         return self
 
-    def get_train_dataloader(self, batch_size: int, drop_last: bool = True) -> DataLoader:
+    def get_train_data_loader(self, batch_size: int, drop_last: bool = True) -> DataLoader:
         _batch_size = batch_size
         _drop_last = drop_last
         _train_torch_dataset = self._get_train_dataset()
@@ -116,7 +117,7 @@ class TextPolarityDataManager(object):
 
         return train_data_loader
 
-    def get_test_dataloader(self, batch_size: int) -> DataLoader:
+    def get_test_data_loader(self, batch_size: int=1) -> DataLoader:
         _batch_size = batch_size
         _test_torch_dataset = self._get_test_dataset()
 
@@ -124,6 +125,17 @@ class TextPolarityDataManager(object):
                                       batch_size=_batch_size)
 
         return test_data_loader
+
+    def get_vocabulary_size(self):
+        return len(self._toknizer.word_index) + 1
+
+    def _from_tensor_slices(self, inputs, labels):
+        _inputs = inputs
+        _labels = labels
+
+        dataset = [(i, l) for i, l in zip(_inputs, _labels)]
+
+        return dataset
 
     def _get_train_dataset(self) -> TextPolarityDataset:
         train_dataset = TextPolarityDataset(self._train_dataset)
@@ -151,10 +163,10 @@ class TextPolarityDataManager(object):
         else:
             raise NotImplementedError()
 
-        return {'train': {'text': train_text_data,
-                          'label': train_label_data},
-                'test': {'text': test_text_data,
-                         'label': test_label_data}}
+        return {'train': {'text': train_text_data[:1000],
+                          'label': train_label_data[:1000]},
+                'test': {'text': test_text_data[:100],
+                         'label': test_label_data[:100]}}
 
     def _extract_text_data(self, dataset: pd.DataFrame) -> List:
         _dataset = dataset

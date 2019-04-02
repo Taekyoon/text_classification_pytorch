@@ -20,11 +20,11 @@ class TextClassifier(Module):
         self._embedding_dims = embedding_dims
         self._conv_in_channels = embedding_dims
         self._conv_out_channels = conv_channels
-        self._linear_in_channels = conv_channels
+        self._linear_in_channels = conv_channels * 3
         self._num_classes = num_classes
 
         self.dual_embedding = DualWordEmbedding(self._vocab_size, self._embedding_dims)
-        self.conv_layer = ConvolutionLayer(self._in_channels, self._out_channels)
+        self.conv_layer = ConvolutionLayer(self._conv_in_channels, self._conv_out_channels)
         self.max_pool_layer = MaxOverTimePoolLayer()
         self.output_linear_layer = FeedForwardLayer(self._linear_in_channels, self._num_classes)
 
@@ -43,10 +43,9 @@ class TextClassifier(Module):
         max_pool_tri_grams = self.max_pool_layer(combined_tri_grams)
         max_pool_tetra_grams = self.max_pool_layer(combined_tetra_grams)
         max_pool_penta_grams = self.max_pool_layer(combined_penta_grams)
-
         max_pool_features = torch.cat((max_pool_tri_grams, max_pool_tetra_grams, max_pool_penta_grams), 1)
 
         output_features = self.output_linear_layer(max_pool_features)
-        output_scores = F.log_softmax(output_features)
+        output_scores = F.log_softmax(output_features, dim=-1)
 
         return output_features, output_scores

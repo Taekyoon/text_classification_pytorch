@@ -58,11 +58,11 @@ class ConvolutionLayer(Module):
 
     def forward(self, inputs: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
         _inputs = inputs
-        _inputs = _inputs.transpose(0, 2, 1)
+        _inputs = _inputs.transpose(2, 1)
 
-        conv_trigram_outputs = F.relu(self.tri_gram_conv_net(_inputs))
-        conv_tetragram_outputs = F.relu(self.tetra_gram_conv_net(_inputs))
-        conv_pentaagram_outputs = F.relu(self.penta_gram_conv_net(_inputs))
+        conv_trigram_outputs = F.relu(self.tri_gram_conv_net(_inputs)).transpose(2, 1)
+        conv_tetragram_outputs = F.relu(self.tetra_gram_conv_net(_inputs)).transpose(2, 1)
+        conv_pentaagram_outputs = F.relu(self.penta_gram_conv_net(_inputs)).transpose(2, 1)
 
         return conv_trigram_outputs, conv_tetragram_outputs, conv_pentaagram_outputs
 
@@ -74,7 +74,7 @@ class MaxOverTimePoolLayer(Module):
     def forward(self, inputs: Tensor) -> Tensor:
         _inputs = inputs
 
-        max_pool_outputs = torch.max(_inputs, 2)[0]
+        max_pool_outputs = torch.max(_inputs, 1)[0]
 
         return max_pool_outputs
 
@@ -92,7 +92,6 @@ class FeedForwardLayer(Module):
 
     def forward(self, inputs: Tensor) -> Tensor:
         _inputs = inputs
-
         linear_outputs = self.linear(inputs)
 
         return linear_outputs
