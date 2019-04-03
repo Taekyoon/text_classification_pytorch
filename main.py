@@ -16,9 +16,8 @@ def main(path: str):
     _eval_steps = _configs['hyperparams']['evaluation_steps']
 
     print('Getting dataset...')
-    _data_manager = prepare_dataset()
+    _data_manager = prepare_dataset(_configs)
     _vocab_size = _data_manager.get_vocabulary_size()
-
 
     print('Now build model...')
     model = build_model(_vocab_size, _embedding_size, _conv_dim)
