@@ -1,4 +1,5 @@
 from typing import List, Any, Tuple, NewType, Dict
+import itertools
 
 from konlpy.tag import Okt
 
@@ -9,8 +10,9 @@ import pandas as pd
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
 
-from tensorflow.python.keras.preprocessing.text import Tokenizer
 from tensorflow.python.keras.preprocessing.sequence import pad_sequences
+
+import gluonnlp as nlp
 
 from sklearn.model_selection import train_test_split
 
@@ -20,6 +22,7 @@ TextPolarityDataset = NewType('TextPolarityDataset', Dataset)
 
 def read_csv_dataset(path: str) -> List:
     data = pd.read_csv(path, sep="\t")
+    data = data.dropna()
 
     return data
 
@@ -51,7 +54,7 @@ class TextPolarityDataManager(object):
         self._test_path = test_path
 
         self._morph_analyzer = None
-        self._toknizer = None
+        self._tokenizer = None
 
         self._raw_dataset = None
 
@@ -80,12 +83,24 @@ class TextPolarityDataManager(object):
 
         return self
 
+    def char_tokenize(self) -> TextPolarityDataManager:
+        _train_text_dataset = self._raw_dataset['train']['text']
+        _test_text_dataset = self._raw_dataset['test']['text']
+
+        _train_morphed_text_dataset = self._trans_morph_spaced_dataset(_train_text_dataset)
+        _test_morphed_text_dataset = self._trans_morph_spaced_dataset(_test_text_dataset)
+
+        self._raw_dataset['train']['morph_text'] = _train_morphed_text_dataset
+        self._raw_dataset['test']['morph_text'] = _test_morphed_text_dataset
+
+        return self
+
     def build_tokenizer(self) -> TextPolarityDataManager:
         _train_morph_text_dataset = self._raw_dataset['train']['morph_text']
 
         tokenizer = self._build_tokenizer(_train_morph_text_dataset)
 
-        self._toknizer = tokenizer
+        self._tokenizer = tokenizer
 
         return self
 
@@ -94,7 +109,7 @@ class TextPolarityDataManager(object):
         _train_label_dataset = self._raw_dataset['train']['label']
         _test_morph_text_dataset = self._raw_dataset['test']['morph_text']
         _test_label_dataset = self._raw_dataset['test']['label']
-        _tokenizer = self._toknizer
+        _tokenizer = self._tokenizer
 
         numerized_train_text_dataset = self._preprocess_input_dataset(_train_morph_text_dataset, _tokenizer)
         numerized_test_text_datset = self._preprocess_input_dataset(_test_morph_text_dataset, _tokenizer)
@@ -126,8 +141,15 @@ class TextPolarityDataManager(object):
 
         return test_data_loader
 
+    def get_pretrained_word_embedding(self):
+        _tokenizer = self._tokenizer
+
+        pretrinaed_embedding = self._create_pretrained_embedding(_tokenizer)
+
+        return pretrinaed_embedding
+
     def get_vocabulary_size(self):
-        return len(self._toknizer.word_index) + 1
+        return len(self._tokenizer.token_to_idx)
 
     def _from_tensor_slices(self, inputs, labels):
         _inputs = inputs
@@ -163,10 +185,10 @@ class TextPolarityDataManager(object):
         else:
             raise NotImplementedError()
 
-        return {'train': {'text': train_text_data[:1000],
-                          'label': train_label_data[:1000]},
-                'test': {'text': test_text_data[:100],
-                         'label': test_label_data[:100]}}
+        return {'train': {'text': train_text_data,
+                          'label': train_label_data},
+                'test': {'text': test_text_data,
+                         'label': test_label_data}}
 
     def _extract_text_data(self, dataset: pd.DataFrame) -> List:
         _dataset = dataset
@@ -193,32 +215,43 @@ class TextPolarityDataManager(object):
 
         return morph_tokenized_text
 
-    def _trans_morph_spaced_dataset(self, data: List, morph_analyzer: Any) -> List:
+    def _trans_morph_spaced_dataset(self, data: List) -> List:
         _data = data
         morph_tokenized_data = list()
 
         for row in tqdm(_data):
-            morph_tokenized_data.append(self._trans_morph_spaced_sentence(row, morph_analyzer))
+            morph_tokenized_data.append(' '.join([s for s in row.replace(' ', '')]))
 
         return morph_tokenized_data
 
-    def _preprocess_input_dataset(self, input_dataset: List, tokenizer: Tokenizer, limit_seq_len=40) -> np.array:
+    def _preprocess_input_dataset(self, input_dataset: List, tokenizer: nlp.Vocab, limit_seq_len=200) -> np.array:
         _input_dataset = input_dataset
-        _char_tokenizer = tokenizer
+        _tokenizer = tokenizer
 
-        _input_dataset = _char_tokenizer.texts_to_sequences(_input_dataset)
-
-        processed_data = pad_sequences(_input_dataset, maxlen=limit_seq_len, padding='post', truncating='post')
+        tokenized_dataset = [sent.split() for sent in _input_dataset]
+        indicied_dataset = [_tokenizer.to_indices(tokens) for tokens in tokenized_dataset]
+        processed_data = pad_sequences(indicied_dataset, maxlen=limit_seq_len, padding='post',
+                                       truncating='post', value=1)
 
         return processed_data
 
-    def _build_tokenizer(self, data: List) -> Tokenizer:
+    def _build_tokenizer(self, data: List) -> nlp.Vocab:
         _text_dataset = data
 
-        tokenizer = Tokenizer()
-        tokenizer.fit_on_texts(_text_dataset)
+        tokenized_dataset = [sent.split() for sent in _text_dataset]
+        counter = nlp.data.count_tokens(itertools.chain.from_iterable([tokens for tokens in tokenized_dataset]))
+        tokenizer = nlp.Vocab(counter=counter, min_freq=10, bos_token=None, eos_token=None)
 
         return tokenizer
+
+    def _create_pretrained_embedding(self, tokenizer):
+        _tokenizer = tokenizer
+
+        ptr_embedding = nlp.embedding.create('fasttext', source='wiki.ko')
+        _tokenizer.set_embedding(ptr_embedding)
+        pretrained_embedding = _tokenizer.embedding.idx_to_vec.asnumpy()
+
+        return pretrained_embedding
 
     def _get_train_and_test_dataset(self, input_dataset: List, label_dataset: List) -> Tuple[Tuple, Tuple]:
         train_input, test_input, train_label, test_label = train_test_split(input_dataset, label_dataset,

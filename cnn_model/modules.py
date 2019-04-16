@@ -22,9 +22,10 @@ class DualWordEmbedding(Module):
         self.static_embedding = Embedding(self._vocab_size, self._embedding_dim)
         self.non_static_embedding = Embedding(self._vocab_size, self._embedding_dim)
 
-        if embeddings:
-            self.static_embedding.weight.data.copy_(embeddings)
-            self.non_static_embedding.weight.data.copy_(embeddings)
+        if embeddings is not None:
+            print('has embeddings ==> ', embeddings.shape)
+            self.static_embedding.weight.data.copy_(torch.Tensor(embeddings))
+            self.non_static_embedding.weight.data.copy_(torch.Tensor(embeddings))
 
         self.static_embedding.weight.requires_grad_(False)
 

@@ -1,0 +1,13 @@
+{
+  "dataset": {
+    "train_path": "../data/ratings_train.txt",
+    "test_path": "../data/ratings_test.txt"
+  },
+  "hyperparams": {
+    "batch_size": 128,
+    "epochs": 5,
+    "embedding_size": 300,
+    "convolution_dims": 100,
+    "evaluation_steps": 500
+  }
+}

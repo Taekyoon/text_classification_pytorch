@@ -24,7 +24,7 @@ def prepare_dataset(configs: Dict) -> DataLoader:
     return data_manager
 
 
-def build_model(vocab_size, embedding_dims, conv_channels) ->  Module:
+def build_model(vocab_size, embedding_dims, conv_channels, embeddings=None) ->  Module:
     _vocab_size = vocab_size
     _embedding_dims = embedding_dims
     _conv_channels = conv_channels
@@ -32,7 +32,8 @@ def build_model(vocab_size, embedding_dims, conv_channels) ->  Module:
     model = TextClassifier(vocab_size,
                            embedding_dims,
                            conv_channels,
-                           2)
+                           2,
+                           embeddings=embeddings)
 
     return model
 
@@ -63,7 +64,7 @@ class TrainManager(object):
 
     def train(self):
         for i in range(self._epochs):
-            self._train_epoch()
+            self._train_epoch(i)
 
     def register_device_configs(self):
         pass
@@ -98,7 +99,7 @@ class TrainManager(object):
 
         return accuracy, loss
 
-    def _train_epoch(self):
+    def _train_epoch(self, epoch):
         model = self._model
         loss_fn = self._loss_fn
         data_loader = self._train_data_loader
@@ -114,16 +115,16 @@ class TrainManager(object):
 
             _, output_scores = model(sample_input)
             loss = loss_fn(output_scores, sample_label)
-            tr_loss = loss.item()
+            tr_loss += loss.item()
             self._backprop(loss)
 
-            if (self._epochs * steps_in_epoch + step) % self._eval_steps:
+            if (epoch * steps_in_epoch + step) % self._eval_steps == 0:
                 val_acc, val_loss = self._eval()
                 model.train()
         else:
             tr_loss /= (step + 1)
 
-        tqdm.write('epoch : {}, tr_loss : {:.3f}, val_acc : {:.3f}, val_loss : {:.3f}'.format(self._epochs + 1,
+        tqdm.write('epoch : {}, tr_loss : {:.3f}, val_acc : {:.3f}, val_loss : {:.3f}'.format(epoch + 1,
                                                                                               tr_loss, val_acc,
                                                                                               val_loss))
 

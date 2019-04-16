@@ -1,0 +1,44 @@
+{
+  "dataset": {
+    "train_path": "../data/ratings_train.txt",
+    "test_path": "../data/ratings_test.txt"
+  },
+  "hyperparams": {
+    "batch_size": 128,
+    "epochs": 10,
+    "evaluation_steps": 500,
+    "model": {
+      "embedding_size": 16,
+      "conv_block_in_channels": [
+        64,
+        64,
+        64,
+        128,
+        128,
+        256,
+        256,
+        512
+      ],
+      "conv_block_out_channels": [
+        64,
+        64,
+        128,
+        128,
+        256,
+        256,
+        512,
+        512
+      ],
+      "linear_in_channels": [
+        4096,
+        2048
+      ],
+      "linear_out_channels": [
+        2048,
+        2048
+      ],
+      "k_max_pool": 8,
+      "num_classes": 2
+    }
+  }
+}

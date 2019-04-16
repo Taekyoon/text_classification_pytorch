@@ -13,7 +13,8 @@ class TextClassifier(Module):
                  vocab_size: int,
                  embedding_dims: int,
                  conv_channels: int,
-                 num_classes: int):
+                 num_classes: int,
+                 embeddings=None):
         super(TextClassifier, self).__init__()
 
         self._vocab_size = vocab_size
@@ -22,8 +23,9 @@ class TextClassifier(Module):
         self._conv_out_channels = conv_channels
         self._linear_in_channels = conv_channels * 3
         self._num_classes = num_classes
+        self._embeddings = embeddings
 
-        self.dual_embedding = DualWordEmbedding(self._vocab_size, self._embedding_dims)
+        self.dual_embedding = DualWordEmbedding(self._vocab_size, self._embedding_dims, self._embeddings)
         self.conv_layer = ConvolutionLayer(self._conv_in_channels, self._conv_out_channels)
         self.max_pool_layer = MaxOverTimePoolLayer()
         self.output_linear_layer = FeedForwardLayer(self._linear_in_channels, self._num_classes)
