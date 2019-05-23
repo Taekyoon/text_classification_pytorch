@@ -1,0 +1,19 @@
+{
+  "dataset": {
+    "train_path": "../data/kor_pair_train.csv",
+    "test_path": "../data/kor_pair_test.csv"
+  },
+  "hyperparams": {
+    "batch_size": 32,
+    "epochs": 20,
+    "evaluation_steps": 50,
+    "model": {
+      "embedding_size": 300,
+      "rnn_hidden_dims": 300,
+      "attn_hidden_dims": 150,
+      "hops": 32,
+      "similarity_hidden_dims": 4000,
+      "num_classes": 2
+    }
+  }
+}

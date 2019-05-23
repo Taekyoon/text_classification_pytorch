@@ -138,10 +138,10 @@ class TrainManager(object):
             tr_loss += loss.item()
             self._backprop(loss)
 
-            # if (epoch * steps_in_epoch + (step + 1)) % self._eval_steps == 0:
-            #     val_acc, val_loss = self._eval()
+            if (epoch * steps_in_epoch + (step + 1)) % self._eval_steps == 0:
+                val_acc, val_loss = self._eval()
                 # tqdm.write('val_acc : {:.3f}, val_loss : {:.3f}'.format(val_acc, val_loss))
-                # model.train()
+                model.train()
 
         else:
             tr_loss /= (step + 1)
